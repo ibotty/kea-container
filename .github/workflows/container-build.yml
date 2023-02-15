@@ -2,13 +2,31 @@
 name: build container
 on:
   push:
-  # workflow_dispatch:
-  # schedule:
-  # - cron: '0 0 * * *' # daily
+  workflow_dispatch:
+  schedule:
+  - cron: '0 0 * * *' # daily
 
 jobs:
+  check_outdated:
+    name: check for outdated base image
+    runs-on: ubuntu-latest
+    outputs:
+      image-needs-updating: ${{ steps.check_outdated.outputs.needs-updating }}
+    steps:
+    - name: check image update
+      id: check_outdated
+      uses: lucacome/docker-image-update-checker@v1
+      with:
+        base-image: quay.io/fedora/fedora:latest
+        image: quay.io/ibotty/kea:latest
+      if: ${{ github.event_name == 'schedule' }}
+
   build:
     name: build image
+
+    needs: check_outdated
+    if: ${{ github.event_name != 'schedule' || needs.check_outdated.outputs.image-needs-updating == 'true' }}
+
     runs-on: ubuntu-latest
     env:
       IMAGE_NAME: kea
