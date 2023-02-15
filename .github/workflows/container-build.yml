@@ -1,0 +1,49 @@
+---
+name: build container
+on:
+  push:
+  # workflow_dispatch:
+  # schedule:
+  # - cron: '0 0 * * *' # daily
+
+jobs:
+  build:
+    name: build image
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: kea
+      # IMAGE_TAGS: latest ${{ github.sha }}
+      IMAGE_TAGS: latest
+      REGISTRY: quay.io/ibotty
+    steps:
+    - name: clone
+      uses: actions/checkout@v3
+
+    - name: log into registry
+      uses: redhat-actions/podman-login@v1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: set up qemu for multi-arch
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-user-static
+
+    - name: buildah
+      id: build-image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: ${{ env.IMAGE_NAME }}
+        tags: ${{ env.IMAGE_TAGS }}
+        archs: amd64, arm64, ppc64le
+        oci: true
+        containerfiles: ./Containerfile
+
+    - name: push to registry
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build-image.outputs.image }}
+        tags: ${{ steps.build-image.outputs.tags }}
+        registry: ${{ env.REGISTRY }}
