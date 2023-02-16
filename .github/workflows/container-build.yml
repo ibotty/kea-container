@@ -11,21 +11,21 @@ jobs:
     name: check for outdated base image
     runs-on: ubuntu-latest
     outputs:
-      image-needs-updating: ${{ steps.check_outdated.outputs.needs-updating }}
+      out-of-date: ${{ steps.check_outdated.outputs.out-of-date }}
     steps:
     - name: check image update
       id: check_outdated
-      uses: lucacome/docker-image-update-checker@v1
+      uses: twiddler/is-my-docker-parent-image-out-of-date@v1
       with:
-        base-image: quay.io/fedora/fedora:latest
-        image: quay.io/ibotty/kea:latest
+        parent-image: quay.io/fedora/fedora:latest
+        my-image: quay.io/ibotty/kea:latest
       if: ${{ github.event_name == 'schedule' }}
 
   build:
     name: build image
 
     needs: check_outdated
-    if: ${{ github.event_name != 'schedule' || needs.check_outdated.outputs.image-needs-updating == 'true' }}
+    if: ${{ github.event_name != 'schedule' || needs.check_outdated.outputs.out-of-date == 'true' }}
 
     runs-on: ubuntu-latest
     env:
