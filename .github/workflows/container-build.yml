@@ -29,7 +29,7 @@ jobs:
       if: ${{ github.event_name == 'schedule' }}
 
   build_kea:
-    name: build image
+    name: build kea image
 
     needs: check_outdated
     if: ${{ github.event_name != 'schedule' || needs.check_outdated_kea.outputs.out-of-date == 'true' }}
@@ -74,7 +74,7 @@ jobs:
         registry: ${{ env.REGISTRY }}
 
   build_stork_agent:
-    name: build image
+    name: build stork-agent image
 
     needs: check_outdated
     if: ${{ github.event_name != 'schedule' || needs.check_outdated_stork_agent.outputs.out-of-date == 'true' }}
