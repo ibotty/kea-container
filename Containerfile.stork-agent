@@ -1,0 +1,15 @@
+FROM registry.access.redhat.com/ubi9-minimal
+
+LABEL Maintainer="Tobias Florek <tob@butter.sh>"
+
+VOLUME ["/etc/kea", "/var/run/kea", "/var/lib/kea"]
+
+ENV KEA_PIDFILE_DIR=/var/run/kea
+
+RUN rpm --import https://dl.cloudsmith.io/public/isc/stork/gpg.77F64EC28053D1FB.key \
+ && . /etc/os-release \
+ && curl "https://dl.cloudsmith.io/public/isc/stork/config.rpm.txt?distro=$ID&version=$VERSION_ID&arch=$(uname -m)" > /etc/yum.repos.d/isc-stork.repo \
+ && microdnf install -y isc-stork-agent \
+ && microdnf clean all
+
+CMD ["/usr/bin/stork-agent"]
