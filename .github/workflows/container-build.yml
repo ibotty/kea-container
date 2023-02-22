@@ -14,18 +14,25 @@ jobs:
       out-of-date: ${{ steps.check_outdated.outputs.out-of-date }}
     steps:
     - name: check image update
-      id: check_outdated
+      id: check_outdated_kea
       uses: twiddler/is-my-docker-parent-image-out-of-date@v1
       with:
         parent-image: quay.io/fedora/fedora:latest
         my-image: quay.io/ibotty/kea:latest
       if: ${{ github.event_name == 'schedule' }}
+    - name: check image update
+      id: check_outdated_stork_agent
+      uses: twiddler/is-my-docker-parent-image-out-of-date@v1
+      with:
+        parent-image: registry.access.redhat.com/ubi9-minimal
+        my-image: quay.io/ibotty/stork-agent:latest
+      if: ${{ github.event_name == 'schedule' }}
 
-  build:
+  build_kea:
     name: build image
 
     needs: check_outdated
-    if: ${{ github.event_name != 'schedule' || needs.check_outdated.outputs.out-of-date == 'true' }}
+    if: ${{ github.event_name != 'schedule' || needs.check_outdated_kea.outputs.out-of-date == 'true' }}
 
     runs-on: ubuntu-latest
     env:
@@ -58,6 +65,51 @@ jobs:
         archs: amd64, arm64, ppc64le
         oci: true
         containerfiles: ./Containerfile
+
+    - name: push to registry
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build-image.outputs.image }}
+        tags: ${{ steps.build-image.outputs.tags }}
+        registry: ${{ env.REGISTRY }}
+
+  build_stork_agent:
+    name: build image
+
+    needs: check_outdated
+    if: ${{ github.event_name != 'schedule' || needs.check_outdated_stork_agent.outputs.out-of-date == 'true' }}
+
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: stork-agent
+      # IMAGE_TAGS: latest ${{ github.sha }}
+      IMAGE_TAGS: latest
+      REGISTRY: quay.io/ibotty
+    steps:
+    - name: clone
+      uses: actions/checkout@v3
+
+    - name: log into registry
+      uses: redhat-actions/podman-login@v1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+
+    - name: set up qemu for multi-arch
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-user-static
+
+    - name: buildah
+      id: build-image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: ${{ env.IMAGE_NAME }}
+        tags: ${{ env.IMAGE_TAGS }}
+        archs: amd64, arm64, ppc64le
+        oci: true
+        containerfiles: ./Containerfile.stork-agent
 
     - name: push to registry
       uses: redhat-actions/push-to-registry@v2
