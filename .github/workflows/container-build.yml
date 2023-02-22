@@ -96,10 +96,11 @@ jobs:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
-    - name: set up qemu for multi-arch
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y qemu-user-static
+    # Not needed, because stork packages are amd64-only.
+    # - name: set up qemu for multi-arch
+    #   run: |
+    #     sudo apt-get update
+    #     sudo apt-get install -y qemu-user-static
 
     - name: buildah
       id: build-image
@@ -107,7 +108,7 @@ jobs:
       with:
         image: ${{ env.IMAGE_NAME }}
         tags: ${{ env.IMAGE_TAGS }}
-        archs: amd64, arm64, ppc64le
+        archs: amd64 #, arm64, ppc64le
         oci: true
         containerfiles: ./Containerfile.stork-agent
 
